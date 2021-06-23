@@ -29,6 +29,7 @@ USE_IDA = False
 
 try:
     import idaapi
+    import idc
     USE_IDA = True
 except:
     if "radare2" in os.environ.get('PATH',''):
@@ -683,7 +684,7 @@ def write_symbols(input_file, output_file, symbols):
         log(traceback.format_exc())
 
 def ida_fcn_filter(func_ea):
-    if SegName(func_ea) not in ("extern", ".plt"):
+    if idc.get_segm_name(func_ea) not in ("extern", ".plt"): #https://hex-rays.com/products/ida/support/idadoc/298.shtml
         return True
     return False 
 
@@ -692,11 +693,11 @@ def get_ida_symbols():
 
     for f in filter(ida_fcn_filter, Functions()):
         func     = get_func(f)
-        seg_name = SegName(f)
+        seg_name = idc.get_segm_name(f)
 
-        fn_name = GetFunctionName(f)
+        fn_name = idc.get_func_name(f)
         symbols.append(Symbol(fn_name, STB_GLOBAL_FUNC, 
-            int(func.startEA), int(func.size()), seg_name))
+            int(func.start_ea), int(func.size()), seg_name))
 
     return symbols
 
@@ -733,6 +734,7 @@ if USE_IDA:
     from idc import *
     from idaapi import *
     from idautils import *
+    import ida_nalt
 
     class Syms2Elf(Form):
         def __init__(self):
@@ -744,7 +746,8 @@ if USE_IDA:
             'txtFile' : Form.FileInput(save=True, swidth=50)
         })
 
-            self.input_elf = GetInputFilePath()
+            self.input_elf = ida_nalt.get_input_file_path()
+            #https://hex-rays.com/products/ida/support/ida74_idapython_no_bc695_porting_guide.shtml
 
         def OnFormChange(self, fid):
             if fid == self.txtFile.id:
